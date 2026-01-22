@@ -1,0 +1,38 @@
+-- 84. to_number
+
+-- Convert a string to a number
+SELECT TO_NUMBER(
+	'1420.89',
+	'9999.99'
+);
+
+SELECT
+	TO_NUMBER(
+		'10,625.78-',
+		'99G999D99S'
+	);
+
+-- FORMATING
+
+SELECT TO_NUMBER(
+	'$1,420.64',
+	'L9G999'
+);
+
+SELECT
+	TO_NUMBER(
+	'1,234,567.89',
+	'9G999g999'
+	)
+
+SELECT
+	TO_NUMBER(
+	'1,234,567.89',
+	'9G999g999D99'
+	)
+
+SELECT
+	TO_NUMBER(
+		'$1,978,299.78',
+		'L9G999G999.99'
+	)
