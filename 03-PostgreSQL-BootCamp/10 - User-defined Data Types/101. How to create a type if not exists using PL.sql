@@ -1,0 +1,23 @@
+-- How to create a type if not exists using PL/pgSQL
+
+
+DO
+$$
+BEGIN
+    IF NOT EXISTS (
+        SELECT *
+        FROM pg_type typ
+        JOIN pg_namespace nsp
+          ON nsp.oid = typ.typnamespace
+        WHERE nsp.nspname = current_schema()
+          AND typ.typname = 'ai'
+    ) THEN
+        EXECUTE '
+            CREATE TYPE ai AS (
+                a text,
+                i integer
+            )
+        ';
+    END IF;
+END;
+$$;
