@@ -1,0 +1,5 @@
+-- 152. Formatting Dates
+
+SELECT CURRENT_TIMESTAMP
+
+SELECT 
