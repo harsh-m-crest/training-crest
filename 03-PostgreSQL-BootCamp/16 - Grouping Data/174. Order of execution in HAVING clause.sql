@@ -1,0 +1,10 @@
+-- 174. Order of execution in HAVING clause
+
+FROM
+WHERE
+GROUP BY
+HAVING
+SELECT
+DISTINCT
+ORDER BY
+LIMIT
