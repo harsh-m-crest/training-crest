@@ -1,0 +1,12 @@
+# Model files
+*.safetensors
+*.pt
+*.bin
+
+# Large datasets
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+.env
