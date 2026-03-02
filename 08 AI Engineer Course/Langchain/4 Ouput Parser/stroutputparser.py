@@ -12,9 +12,9 @@ llm = HuggingFaceEndpoint(
     huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
 )
 
-model = ChatHuggingFace(llm=llm)
+model = ChatHuggingFace(llm=llm) 
 
-# 1st prompt -> detailed report
+# 1s t prompt -> detailed report
 template1 = PromptTemplate(
     template='Write a detailed report on {topic}',
     input_variables=['topic']
