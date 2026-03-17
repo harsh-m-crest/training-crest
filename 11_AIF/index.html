@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS AIF-C01 Quiz Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --card2: #1c2333;
+  --border: #30363d;
+  --border2: #21262d;
+  --orange: #f0883e;
+  --orange-dim: rgba(240,136,62,0.12);
+  --cyan: #79c0ff;
+  --cyan-dim: rgba(121,192,255,0.1);
+  --green: #56d364;
+  --green-dim: rgba(86,211,100,0.1);
+  --red: #f85149;
+  --red-dim: rgba(248,81,73,0.1);
+  --yellow: #e3b341;
+  --purple: #bc8cff;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --text3: #484f58;
+  --r: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  font-size: 15px;
+}
+
+/* ───── LOADING ───── */
+#loadingScreen {
+  position: fixed; inset: 0; z-index: 999;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+}
+.loader-ring {
+  width: 48px; height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text3); letter-spacing: 2px; }
+.loader-error { color: var(--red); font-size: 14px; text-align: center; max-width: 320px; line-height: 1.6; }
+
+/* ───── TOPBAR ───── */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(13,17,23,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border2);
+  padding: 0 24px;
+  height: 52px;
+  display: flex; align-items: center; gap: 12px;
+}
+.topbar-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600;
+  color: var(--orange);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.topbar-sep { flex: 1; }
+.topbar-stat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text3);
+  background: var(--card);
+  border: 1px solid var(--border2);
+  padding: 5px 10px; border-radius: 5px;
+}
+.topbar-stat b { color: var(--orange); }
+.topbar-qcount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text3);
+}
+
+/* ───── SCREENS ───── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ───── HOME ───── */
+.home-wrap { max-width: 960px; margin: 0 auto; padding: 48px 24px 80px; }
+.home-headline {
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 700; line-height: 1.15;
+  margin-bottom: 10px; letter-spacing: -0.5px;
+}
+.home-headline span { color: var(--orange); }
+.home-sub { color: var(--text2); font-size: 15px; margin-bottom: 40px; }
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase; letter-spacing: 3px;
+  margin-bottom: 14px;
+}
+
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 40px; }
+.stat-tile { background: var(--card); border: 1px solid var(--border2); border-radius: var(--r); padding: 18px; }
+.stat-num { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 600; color: var(--orange); }
+.stat-lbl { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+
+.modes { display: flex; gap: 10px; margin-bottom: 32px; flex-wrap: wrap; }
+.mode-pill {
+  background: var(--card); border: 2px solid var(--border);
+  border-radius: 50px; padding: 10px 22px;
+  cursor: pointer; font-size: 14px; font-weight: 500;
+  transition: all .18s; display: flex; align-items: center; gap: 8px;
+  color: var(--text2);
+}
+.mode-pill:hover { border-color: var(--orange); color: var(--text); }
+.mode-pill.on { border-color: var(--orange); background: var(--orange-dim); color: var(--orange); }
+
+.topics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 28px; }
+.topic-tile {
+  background: var(--card); border: 2px solid var(--border2);
+  border-radius: var(--r); padding: 14px 16px;
+  cursor: pointer; transition: all .18s;
+  display: flex; align-items: center; gap: 12px;
+}
+.topic-tile:hover { border-color: var(--cyan); }
+.topic-tile.on { border-color: var(--cyan); background: var(--cyan-dim); }
+.topic-tile.on .t-check { background: var(--cyan); border-color: var(--cyan); color: #000; }
+.t-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--border); flex-shrink: 0;
+  font-size: 10px; display: flex; align-items: center; justify-content: center;
+  transition: all .18s;
+}
+.t-info { flex: 1; min-width: 0; }
+.t-name { font-size: 13px; font-weight: 600; }
+.t-count { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+.count-row { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.count-lbl { font-size: 13px; color: var(--text2); white-space: nowrap; }
+input[type=range] {
+  flex: 1; -webkit-appearance: none; height: 3px;
+  background: var(--border); border-radius: 2px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px;
+  background: var(--orange); border-radius: 50%; cursor: pointer;
+}
+.count-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; color: var(--orange); min-width: 35px; text-align: right; }
+
+.btn-start {
+  width: 100%; background: var(--orange); color: #000;
+  border: none; padding: 16px; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: all .18s; letter-spacing: 0.3px;
+}
+.btn-start:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-start:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; transform: none; filter: none; }
+
+/* ───── QUIZ ───── */
+.quiz-wrap { max-width: 740px; margin: 0 auto; padding: 32px 24px 80px; }
+
+.qz-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.qz-progress { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text2); }
+.qz-tag {
+  background: var(--cyan-dim); border: 1px solid var(--cyan);
+  color: var(--cyan); font-size: 10px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 1px;
+  max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.qz-timer { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan); display: none; }
+.qz-timer.warn { color: var(--red); }
+.btn-quit {
+  margin-left: auto; background: transparent;
+  border: 1px solid var(--border2); color: var(--text3);
+  padding: 5px 12px; border-radius: 5px; cursor: pointer;
+  font-size: 12px; font-family: 'Space Grotesk', sans-serif;
+  transition: all .15s;
+}
+.btn-quit:hover { border-color: var(--red); color: var(--red); }
+
+.pbar { height: 2px; background: var(--border2); border-radius: 1px; margin-bottom: 28px; overflow: hidden; }
+.pbar-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--orange)); border-radius: 1px; transition: width .4s ease; }
+
+.q-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--orange); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+.q-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-left: 3px solid var(--orange);
+  border-radius: var(--r); padding: 24px;
+  font-size: 16px; line-height: 1.7; margin-bottom: 24px;
+}
+
+.opts { display: flex; flex-direction: column; gap: 9px; }
+.opt {
+  background: var(--card); border: 2px solid var(--border2);
+  border-radius: var(--r); padding: 14px 18px;
+  cursor: pointer; display: flex; align-items: flex-start; gap: 14px;
+  transition: all .15s; line-height: 1.55;
+}
+.opt:hover:not(.locked) { border-color: var(--cyan); background: var(--cyan-dim); }
+.opt-key { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text3); min-width: 18px; padding-top: 2px; }
+.opt.correct { border-color: var(--green) !important; background: var(--green-dim) !important; }
+.opt.correct .opt-key { color: var(--green); }
+.opt.wrong { border-color: var(--red) !important; background: var(--red-dim) !important; }
+.opt.wrong .opt-key { color: var(--red); }
+.opt.locked { cursor: default; }
+
+.feedback { margin-top: 16px; padding: 14px 18px; border-radius: var(--r); font-size: 14px; line-height: 1.6; display: none; }
+.feedback.show { display: block; }
+.feedback.ok { background: var(--green-dim); border: 1px solid var(--green); color: #7ee787; }
+.feedback.bad { background: var(--red-dim); border: 1px solid var(--red); color: #ffa198; }
+
+.btn-next {
+  margin-top: 20px; float: right; display: none;
+  background: var(--orange); color: #000; border: none;
+  padding: 12px 28px; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: all .18s;
+}
+.btn-next.show { display: block; }
+.btn-next:hover { filter: brightness(1.1); }
+.clearfix { clear: both; }
+
+/* ───── RESULTS ───── */
+.results-wrap { max-width: 740px; margin: 0 auto; padding: 48px 24px 80px; }
+.r-hero { text-align: center; margin-bottom: 44px; }
+.r-pct { font-family: 'JetBrains Mono', monospace; font-size: 80px; font-weight: 600; line-height: 1; margin-bottom: 6px; }
+.r-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+.r-title { font-size: 20px; font-weight: 600; }
+
+.r-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 36px; }
+.r-tile { background: var(--card); border: 1px solid var(--border2); border-radius: var(--r); padding: 20px; text-align: center; }
+.r-tile-num { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 600; margin-bottom: 4px; }
+.r-tile-lbl { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+
+.topic-bars { margin-bottom: 36px; }
+.tbar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.tbar-name { font-size: 12px; color: var(--text2); min-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tbar-bg { flex: 1; height: 6px; background: var(--border2); border-radius: 3px; overflow: hidden; }
+.tbar-fill { height: 100%; border-radius: 3px; transition: width .8s ease; }
+.tbar-pct { font-family: 'JetBrains Mono', monospace; font-size: 11px; min-width: 36px; text-align: right; }
+
+.r-btns { display: flex; gap: 10px; }
+.btn-sec {
+  flex: 1; background: transparent; border: 2px solid var(--border);
+  color: var(--text2); padding: 13px; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .18s;
+}
+.btn-sec:hover { border-color: var(--orange); color: var(--orange); }
+.btn-pri {
+  flex: 1; background: var(--orange); color: #000; border: none;
+  padding: 13px; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .18s;
+}
+.btn-pri:hover { filter: brightness(1.1); }
+
+.review-panel { margin-top: 28px; }
+.review-item {
+  background: var(--card); border: 1px solid var(--border2);
+  border-left: 3px solid var(--border);
+  border-radius: var(--r); padding: 18px; margin-bottom: 10px;
+}
+.review-item.ok { border-left-color: var(--green); }
+.review-item.bad { border-left-color: var(--red); }
+.ri-q { font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+.ri-a { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.ri-wrong { color: var(--red); margin-bottom: 3px; }
+.ri-right { color: var(--green); }
+
+.btn-toggle {
+  width: 100%; background: transparent; border: 1px solid var(--border);
+  color: var(--text2); padding: 10px; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif; font-size: 13px;
+  cursor: pointer; margin-top: 24px; margin-bottom: 16px; transition: all .18s;
+}
+.btn-toggle:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* ───── MODAL ───── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-box {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 32px 28px; max-width: 360px; width: 90%;
+  text-align: center;
+}
+.modal-icon { font-size: 32px; margin-bottom: 12px; }
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.modal-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; line-height: 1.5; }
+.modal-btns { display: flex; gap: 10px; }
+.modal-cancel {
+  flex: 1; background: transparent; border: 2px solid var(--border);
+  color: var(--text2); padding: 11px; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.modal-cancel:hover { border-color: var(--text2); color: var(--text); }
+.modal-confirm {
+  flex: 1; background: var(--red); color: #fff; border: none;
+  padding: 11px; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .15s;
+}
+.modal-confirm:hover { filter: brightness(1.15); }
+
+.hidden { display: none !important; }
+
+@media(max-width:640px){
+  .stats-row { grid-template-columns: repeat(2,1fr); }
+  .topics-grid { grid-template-columns: repeat(2,1fr); }
+  .modes { flex-direction: column; }
+  .r-pct { font-size: 56px; }
+  .r-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loadingScreen">
+  <div class="loader-ring"></div>
+  <div class="loader-text">LOADING QUESTIONS...</div>
+  <div id="loadError" class="loader-error hidden"></div>
+</div>
+
+<div id="appRoot" class="hidden">
+
+<div class="topbar">
+  <div class="topbar-logo">AIF-C01</div>
+  <span style="font-size:12px;color:var(--text3)">AWS AI Practitioner</span>
+  <div class="topbar-sep"></div>
+  <div class="topbar-qcount" id="topbarQCount"></div>
+  <div class="topbar-stat" id="globalStat" style="display:none">
+    Session <b id="globalPct">—</b>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="homeScreen" class="screen active">
+<div class="home-wrap">
+  <div class="home-headline">Master <span>AWS AI Practitioner</span><br>one quiz at a time.</div>
+  <div class="home-sub" id="homeSubtitle">Loading questions...</div>
+
+  <div class="stats-row">
+    <div class="stat-tile"><div class="stat-num" id="sTotalQ">—</div><div class="stat-lbl">Questions</div></div>
+    <div class="stat-tile"><div class="stat-num" id="sAttempted">0</div><div class="stat-lbl">Attempted</div></div>
+    <div class="stat-tile"><div class="stat-num" id="sCorrect">0</div><div class="stat-lbl">Correct</div></div>
+    <div class="stat-tile"><div class="stat-num" id="sAccuracy">—</div><div class="stat-lbl">Accuracy</div></div>
+  </div>
+
+  <div class="section-label">Practice Mode</div>
+  <div class="modes">
+    <div class="mode-pill on" data-mode="topic" onclick="pickMode(this)">🎯 Topic Focus</div>
+    <div class="mode-pill" data-mode="mixed" onclick="pickMode(this)">🔀 Mixed Topics</div>
+    <div class="mode-pill" data-mode="full" onclick="pickMode(this)">📋 Full Mock Exam</div>
+  </div>
+
+  <div id="topicBlock">
+    <div class="section-label">Select Topic(s)</div>
+    <div class="topics-grid" id="topicsGrid"></div>
+  </div>
+
+  <div class="count-row">
+    <div class="count-lbl">Questions:</div>
+    <input type="range" id="qSlider" min="5" max="50" value="20" oninput="setCount(this.value)">
+    <div class="count-val" id="qVal">20</div>
+  </div>
+
+  <button class="btn-start" id="startBtn" onclick="startQuiz()">Start Quiz →</button>
+</div>
+</div>
+
+<!-- QUIZ -->
+<div id="quizScreen" class="screen">
+<div class="quiz-wrap">
+  <div class="qz-header">
+    <div class="qz-progress" id="qzProg">Q 1 / 20</div>
+    <div class="qz-tag" id="qzTag">Topic</div>
+    <div class="qz-timer" id="qzTimer"></div>
+    <button class="btn-quit" onclick="quitQuiz()">✕ Quit</button>
+  </div>
+  <div class="pbar"><div class="pbar-fill" id="pbarFill" style="width:0%"></div></div>
+  <div class="q-badge" id="qBadge">QUESTION 01</div>
+  <div class="q-card" id="qCard"></div>
+  <div class="opts" id="optsDiv"></div>
+  <div class="feedback" id="fbDiv"></div>
+  <button class="btn-next" id="nextBtn" onclick="next()">Next →</button>
+  <div class="clearfix"></div>
+</div>
+</div>
+
+<!-- RESULTS -->
+<div id="resultsScreen" class="screen">
+<div class="results-wrap">
+  <div class="r-hero">
+    <div class="r-pct" id="rPct">0%</div>
+    <div class="r-subtitle" id="rSub">0 correct out of 0</div>
+    <div class="r-title" id="rTitle">—</div>
+  </div>
+  <div class="r-grid">
+    <div class="r-tile"><div class="r-tile-num" id="rC" style="color:var(--green)">0</div><div class="r-tile-lbl">Correct</div></div>
+    <div class="r-tile"><div class="r-tile-num" id="rW" style="color:var(--red)">0</div><div class="r-tile-lbl">Wrong</div></div>
+    <div class="r-tile"><div class="r-tile-num" id="rT" style="color:var(--text2)">0</div><div class="r-tile-lbl">Total</div></div>
+  </div>
+  <div class="topic-bars" id="topicBars"></div>
+  <div class="r-btns">
+    <button class="btn-sec" onclick="showReview()">📖 Review Answers</button>
+    <button class="btn-pri" onclick="goHome()">← Home</button>
+  </div>
+  <div class="review-panel hidden" id="reviewPanel">
+    <button class="btn-toggle" onclick="toggleReview()">▲ Hide Review</button>
+    <div id="reviewItems"></div>
+  </div>
+</div>
+</div>
+
+</div><!-- #appRoot -->
+
+<!-- QUIT MODAL -->
+<div class="modal-overlay hidden" id="quitModal">
+  <div class="modal-box">
+    <div class="modal-icon">⚠️</div>
+    <div class="modal-title">Quit this quiz?</div>
+    <div class="modal-sub">Your current progress won't be saved to your session stats.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeQuitModal()">Keep Going</button>
+      <button class="modal-confirm" onclick="confirmQuit()">Yes, Quit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOPICS = [
+  "AI / ML Concepts","Bedrock","Prompt Engineering","Amazon Q",
+  "Managed AI Services","SageMaker","Responsible AI","Cloud Basics","Security"
+];
+const T_ICON = {
+  "AI / ML Concepts":"🧠","Bedrock":"⚡","Prompt Engineering":"✍️",
+  "Amazon Q":"🤖","Managed AI Services":"🛠️","SageMaker":"🔬",
+  "Responsible AI":"🛡️","Cloud Basics":"☁️","Security":"🔒"
+};
+
+let ALL = [];
+let mode = "topic", selTopics = [], qCount = 20;
+let quiz = [], idx = 0, score = 0, answers = [];
+let timer = null, timeLeft = 0;
+
+// ── LOAD questions.json ──
+async function loadQuestions() {
+  try {
+    const res = await fetch("questions.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    ALL = await res.json();
+    // Validate basic structure
+    if (!Array.isArray(ALL) || ALL.length === 0) throw new Error("questions.json is empty or invalid");
+    onLoaded();
+  } catch (err) {
+    document.getElementById("loadError").classList.remove("hidden");
+    document.getElementById("loadError").innerHTML =
+      `<strong>Could not load questions.json</strong><br>${err.message}<br><br>
+       Make sure <code>questions.json</code> is in the same folder as <code>index.html</code>.`;
+    document.querySelector(".loader-ring").style.display = "none";
+    document.querySelector(".loader-text").style.display = "none";
+  }
+}
+
+function onLoaded() {
+  document.getElementById("loadingScreen").style.display = "none";
+  document.getElementById("appRoot").classList.remove("hidden");
+  const total = ALL.length;
+  document.getElementById("sTotalQ").textContent = total;
+  document.getElementById("homeSubtitle").textContent =
+    total + " questions from your PDF · 9 exam topics · 3 practice modes";
+  document.getElementById("topbarQCount").textContent = total + " questions";
+  buildTopicGrid();
+  loadStats();
+  // default select first topic
+  const first = document.querySelector(".topic-tile");
+  if (first) { first.classList.add("on"); selTopics = [first.dataset.topic]; }
+  updateStart();
+}
+
+function buildTopicGrid() {
+  const g = document.getElementById("topicsGrid");
+  g.innerHTML = TOPICS.map(t => {
+    const cnt = ALL.filter(q => q.topic === t).length;
+    return `<div class="topic-tile" data-topic="${t}" onclick="toggleTopic(this)">
+      <div class="t-check">✓</div>
+      <div class="t-info">
+        <div class="t-name">${T_ICON[t]} ${t}</div>
+        <div class="t-count">${cnt} questions</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function loadStats() {
+  const d = JSON.parse(localStorage.getItem("aif_v2") || "{}");
+  const att = d.att || 0, cor = d.cor || 0;
+  document.getElementById("sAttempted").textContent = att;
+  document.getElementById("sCorrect").textContent = cor;
+  if (att > 0) {
+    const pct = Math.round(cor/att*100) + "%";
+    document.getElementById("sAccuracy").textContent = pct;
+    document.getElementById("globalStat").style.display = "";
+    document.getElementById("globalPct").textContent = pct;
+  }
+}
+
+function saveStats(cor, tot) {
+  const d = JSON.parse(localStorage.getItem("aif_v2") || "{}");
+  d.att = (d.att||0) + tot;
+  d.cor = (d.cor||0) + cor;
+  localStorage.setItem("aif_v2", JSON.stringify(d));
+}
+
+function pickMode(el) {
+  document.querySelectorAll(".mode-pill").forEach(p => p.classList.remove("on"));
+  el.classList.add("on");
+  mode = el.dataset.mode;
+  const tb = document.getElementById("topicBlock");
+  const sl = document.getElementById("qSlider");
+  if (mode === "full") {
+    tb.style.display = "none";
+    selTopics = [...TOPICS];
+    const max = Math.min(ALL.length, 65);
+    sl.max = max; sl.value = max; setCount(max);
+  } else {
+    tb.style.display = "";
+    sl.max = 50;
+    if (parseInt(sl.value) > 50) { sl.value = 50; setCount(50); }
+    if (mode === "mixed") {
+      document.querySelectorAll(".topic-tile").forEach((t,i) => t.classList.toggle("on", i<3));
+      selTopics = TOPICS.slice(0,3);
+    }
+  }
+  updateStart();
+}
+
+function toggleTopic(el) {
+  if (mode === "topic") {
+    document.querySelectorAll(".topic-tile").forEach(t => t.classList.remove("on"));
+    el.classList.add("on");
+    selTopics = [el.dataset.topic];
+  } else {
+    el.classList.toggle("on");
+    selTopics = Array.from(document.querySelectorAll(".topic-tile.on")).map(t => t.dataset.topic);
+    if (!selTopics.length) { el.classList.add("on"); selTopics = [el.dataset.topic]; }
+    if (mode === "mixed" && selTopics.length > 3) {
+      el.classList.remove("on");
+      selTopics = Array.from(document.querySelectorAll(".topic-tile.on")).map(t => t.dataset.topic);
+    }
+  }
+  updateStart();
+}
+
+function setCount(v) { document.getElementById("qVal").textContent = v; qCount = parseInt(v); }
+function updateStart() { document.getElementById("startBtn").disabled = selTopics.length === 0; }
+
+function shuffle(a) {
+  const r = [...a];
+  for (let i = r.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [r[i],r[j]] = [r[j],r[i]];
+  }
+  return r;
+}
+
+function startQuiz() {
+  let pool = ALL.filter(q => selTopics.includes(q.topic));
+  pool = shuffle(pool).slice(0, qCount);
+  if (!pool.length) { alert("No questions for selected topics!"); return; }
+  quiz = pool; idx = 0; score = 0; answers = [];
+  show("quizScreen");
+  if (mode === "full") {
+    timeLeft = quiz.length * 90;
+    document.getElementById("qzTimer").style.display = "";
+    startTimer();
+  } else {
+    document.getElementById("qzTimer").style.display = "none";
+  }
+  renderQ();
+}
+
+function startTimer() {
+  clearInterval(timer);
+  renderTimer();
+  timer = setInterval(() => {
+    timeLeft--;
+    renderTimer();
+    if (timeLeft <= 0) { clearInterval(timer); finishQuiz(); }
+  }, 1000);
+}
+
+function renderTimer() {
+  const m = Math.floor(timeLeft/60), s = timeLeft%60;
+  const el = document.getElementById("qzTimer");
+  el.textContent = `⏱ ${m}:${String(s).padStart(2,"0")}`;
+  el.className = "qz-timer" + (timeLeft < 60 ? " warn" : "");
+}
+
+function renderQ() {
+  const q = quiz[idx];
+  const tot = quiz.length;
+  document.getElementById("qzProg").textContent = `Q ${idx+1} / ${tot}`;
+  document.getElementById("qzTag").textContent = q.topic;
+  document.getElementById("qBadge").textContent = `QUESTION ${String(idx+1).padStart(2,"0")}`;
+  document.getElementById("qCard").textContent = q.question;
+  document.getElementById("pbarFill").style.width = (idx/tot*100)+"%";
+  document.getElementById("fbDiv").className = "feedback";
+  document.getElementById("fbDiv").innerHTML = "";
+  document.getElementById("nextBtn").className = "btn-next";
+  const opts = document.getElementById("optsDiv");
+  opts.innerHTML = Object.entries(q.options).map(([k,v]) =>
+    `<div class="opt" data-k="${k}" onclick="pick(this,'${k}')">
+       <div class="opt-key">${k}</div><div>${v}</div>
+     </div>`
+  ).join("");
+}
+
+function pick(el, key) {
+  if (el.classList.contains("locked")) return;
+  const q = quiz[idx];
+  const correct = key === q.answer;
+  if (correct) score++;
+  document.querySelectorAll(".opt").forEach(o => o.classList.add("locked"));
+  document.querySelectorAll(".opt").forEach(o => {
+    if (o.dataset.k === q.answer) o.classList.add("correct");
+  });
+  if (!correct) el.classList.add("wrong");
+  const fb = document.getElementById("fbDiv");
+  if (correct) {
+    fb.className = "feedback ok show";
+    fb.innerHTML = "<strong>✓ Correct!</strong>";
+  } else {
+    fb.className = "feedback bad show";
+    fb.innerHTML = `<strong>✗ Incorrect.</strong> Correct answer: <strong>${q.answer}) ${q.options[q.answer]}</strong>`;
+  }
+  answers.push({ q, selected: key, correct });
+  const nb = document.getElementById("nextBtn");
+  nb.className = "btn-next show";
+  nb.textContent = idx < quiz.length-1 ? "Next →" : "Finish →";
+}
+
+function next() {
+  idx++;
+  if (idx >= quiz.length) finishQuiz();
+  else renderQ();
+}
+
+function quitQuiz() { document.getElementById("quitModal").classList.remove("hidden"); }
+function closeQuitModal() { document.getElementById("quitModal").classList.add("hidden"); }
+function confirmQuit() {
+  document.getElementById("quitModal").classList.add("hidden");
+  clearInterval(timer);
+  goHome();
+}
+
+function finishQuiz() {
+  clearInterval(timer);
+  const tot = answers.length;
+  const cor = answers.filter(a => a.correct).length;
+  saveStats(cor, tot);
+  renderResults(cor, tot);
+}
+
+function renderResults(cor, tot) {
+  show("resultsScreen");
+  const pct = tot > 0 ? Math.round(cor/tot*100) : 0;
+  const pctEl = document.getElementById("rPct");
+  pctEl.textContent = pct+"%";
+  pctEl.style.color = pct>=70 ? "var(--green)" : pct>=50 ? "var(--orange)" : "var(--red)";
+  document.getElementById("rSub").textContent = `${cor} correct out of ${tot}`;
+  let title = "";
+  if (pct>=80) title = "🏆 Outstanding! You're exam-ready.";
+  else if (pct>=70) title = "✅ Great work! Almost there.";
+  else if (pct>=50) title = "📚 Good effort — review weak areas.";
+  else title = "💪 Keep going! Study the review below.";
+  document.getElementById("rTitle").textContent = title;
+  document.getElementById("rC").textContent = cor;
+  document.getElementById("rW").textContent = tot-cor;
+  document.getElementById("rT").textContent = tot;
+  const ts = {};
+  answers.forEach(a => {
+    const t = a.q.topic;
+    if (!ts[t]) ts[t] = {c:0,t:0};
+    ts[t].t++; if (a.correct) ts[t].c++;
+  });
+  document.getElementById("topicBars").innerHTML =
+    `<div class="section-label" style="margin-bottom:12px">By Topic</div>` +
+    Object.entries(ts).map(([t,s]) => {
+      const p = Math.round(s.c/s.t*100);
+      const col = p>=70?"var(--green)":p>=50?"var(--orange)":"var(--red)";
+      return `<div class="tbar-row">
+        <div class="tbar-name">${T_ICON[t]||""} ${t} (${s.c}/${s.t})</div>
+        <div class="tbar-bg"><div class="tbar-fill" style="width:${p}%;background:${col}"></div></div>
+        <div class="tbar-pct" style="color:${col}">${p}%</div>
+      </div>`;
+    }).join("");
+  document.getElementById("reviewPanel").classList.add("hidden");
+}
+
+function showReview() {
+  const panel = document.getElementById("reviewPanel");
+  panel.classList.remove("hidden");
+  document.getElementById("reviewItems").innerHTML = answers.map((a,i) => `
+    <div class="review-item ${a.correct?"ok":"bad"}">
+      <div class="ri-q"><strong>Q${i+1}.</strong> ${a.q.question}</div>
+      <div class="ri-a">
+        ${!a.correct ? `<div class="ri-wrong">✗ Your answer: ${a.selected}) ${a.q.options[a.selected]||""}</div>` : ""}
+        <div class="ri-right">✓ Correct: ${a.q.answer}) ${a.q.options[a.q.answer]}</div>
+      </div>
+    </div>`
+  ).join("");
+  panel.scrollIntoView({behavior:"smooth"});
+}
+
+function toggleReview() {
+  const items = document.getElementById("reviewItems");
+  const btn = document.querySelector(".btn-toggle");
+  items.classList.toggle("hidden");
+  btn.textContent = items.classList.contains("hidden") ? "▼ Show Review" : "▲ Hide Review";
+}
+
+function goHome() { clearInterval(timer); show("homeScreen"); loadStats(); }
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// Start by loading the external JSON
+loadQuestions();
+</script>
+</body>
+</html>
